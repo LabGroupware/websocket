@@ -3,6 +3,7 @@ package org.cresplanex.nova.websocket.handler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.cresplanex.nova.websocket.constants.WebSocketSetting;
 import org.cresplanex.nova.websocket.ws.receive.ReceptionMessage;
 import org.cresplanex.nova.websocket.ws.receive.SubscribeMessage;
 import org.cresplanex.nova.websocket.ws.receive.UnsubscribeMessage;
@@ -14,6 +15,8 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import java.io.EOFException;
 
 /**
  * WebSocket接続ハンドラ
@@ -44,7 +47,13 @@ public class ConnectionHandler extends TextWebSocketHandler {
      */
     @Override
     public void handleTextMessage(@NonNull WebSocketSession session, TextMessage message) throws Exception {
-        log.info("Received message: {}", message.getPayload());
+        String userId = (String) session.getAttributes().get(WebSocketSetting.USER_ID_SESSION_ATTRIBUTE);
+        if (userId == null) {
+            log.error("User ID is not found in session attributes");
+            return;
+        }
+
+        log.info("Received Message: {}\nFrom: {}", message.getPayload(), userId);
 
         try {
             ReceptionMessage receptionMessage = objectMapper.readValue(message.getPayload(), ReceptionMessage.class);
@@ -122,6 +131,10 @@ public class ConnectionHandler extends TextWebSocketHandler {
      */
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+        if (exception instanceof EOFException) {
+            log.info("WebSocket Connection Closed from Client: {}", session.getId());
+            return;
+        }
         log.error("WebSocket Transport Error: {}", exception.getMessage());
     }
 
