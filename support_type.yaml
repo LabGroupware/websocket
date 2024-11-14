@@ -1,0 +1,4 @@
+job:
+    - Process
+    - Complete
+    - Fail
