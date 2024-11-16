@@ -16,8 +16,6 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.io.EOFException;
-
 /**
  * WebSocket接続ハンドラ
  * textMessageのみを処理し, バイナリであればエラーを投げる
@@ -130,12 +128,9 @@ public class ConnectionHandler extends TextWebSocketHandler {
      * @throws Exception 例外
      */
     @Override
-    public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
-        if (exception instanceof EOFException) {
-            log.info("WebSocket Connection Closed from Client: {}", session.getId());
-            return;
-        }
-        log.error("WebSocket Transport Error: {}", exception.getMessage());
+    public void handleTransportError(WebSocketSession session, @NonNull Throwable exception) throws Exception {
+        log.info("WebSocket Connection Closed from Client: {}", session.getId());
+        return;
     }
 
     /**
@@ -146,7 +141,7 @@ public class ConnectionHandler extends TextWebSocketHandler {
      * @throws Exception 例外
      */
     @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) throws Exception {
+    public void afterConnectionClosed(WebSocketSession session, @NonNull CloseStatus closeStatus) throws Exception {
         log.info("WebSocket Connection Closed: {}", session.getId());
     }
 

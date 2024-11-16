@@ -5,7 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.cresplanex.nova.websocket.constants.ServerErrorCode;
+import org.cresplanex.api.state.common.constants.WebSocketApplicationCode;
 import org.cresplanex.nova.websocket.dto.ErrorAttributeDto;
 import org.cresplanex.nova.websocket.dto.ErrorResponseDto;
 import org.springframework.http.HttpStatus;
@@ -35,7 +35,7 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
         );
 
         ErrorResponseDto errorResponseDTO = ErrorResponseDto.create(
-                ServerErrorCode.WS_AUTHENTICATION_FAILED,
+                WebSocketApplicationCode.AUTHENTICATION_FAILED,
                 "Authentication failed",
                 errorAttributeDTO
         );

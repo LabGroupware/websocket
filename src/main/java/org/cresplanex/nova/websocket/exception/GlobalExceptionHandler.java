@@ -3,14 +3,12 @@ package org.cresplanex.nova.websocket.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.cresplanex.nova.websocket.constants.ServerErrorCode;
+import org.cresplanex.api.state.common.constants.WebSocketApplicationCode;
 import org.cresplanex.nova.websocket.dto.ErrorAttributeDto;
 import org.cresplanex.nova.websocket.dto.ErrorResponseDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-//import org.springframework.security.access.AccessDeniedException;
-//import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
@@ -44,7 +42,7 @@ public class GlobalExceptionHandler {
         ErrorAttributeDto errorAttributeDTO = getErrorAttributeDto(ex, request);
 
         ErrorResponseDto errorResponseDTO = ErrorResponseDto.create(
-                ServerErrorCode.WS_VALIDATION_ERROR,
+                WebSocketApplicationCode.VALIDATION_ERROR,
                 "Validation Error",
                 errorAttributeDTO
         );
@@ -86,7 +84,7 @@ public class GlobalExceptionHandler {
         );
 
         ErrorResponseDto errorResponseDTO = ErrorResponseDto.create(
-                ServerErrorCode.WS_METHOD_NOT_ALLOWED,
+                WebSocketApplicationCode.METHOD_NOT_ALLOWED,
                 "Method Not Supported",
                 errorAttributeDTO
         );
@@ -109,7 +107,7 @@ public class GlobalExceptionHandler {
         );
 
         ErrorResponseDto errorResponseDTO = ErrorResponseDto.create(
-                ServerErrorCode.WS_NOT_SUPPORT_CONTENT_TYPE,
+                WebSocketApplicationCode.NOT_SUPPORT_CONTENT_TYPE,
                 "Media Type Not Supported",
                 errorAttributeDTO
         );
@@ -132,7 +130,7 @@ public class GlobalExceptionHandler {
         );
 
         ErrorResponseDto errorResponseDTO = ErrorResponseDto.create(
-                ServerErrorCode.WS_MISSING_PATH_VARIABLE,
+                WebSocketApplicationCode.MISSING_PATH_VARIABLE,
                 "Validation Error",
                 errorAttributeDTO
         );
@@ -154,7 +152,7 @@ public class GlobalExceptionHandler {
         );
 
         ErrorResponseDto errorResponseDTO = ErrorResponseDto.create(
-                ServerErrorCode.WS_EXCEED_MAX_UPLOAD_SIZE,
+                WebSocketApplicationCode.EXCEED_MAX_UPLOAD_SIZE,
                 "Validation Error",
                 errorAttributeDTO
         );
@@ -176,7 +174,7 @@ public class GlobalExceptionHandler {
         );
 
         ErrorResponseDto errorResponseDTO = ErrorResponseDto.create(
-                ServerErrorCode.WS_NOT_FOUND_HANDLER,
+                WebSocketApplicationCode.NOT_FOUND_HANDLER,
                 "Not Found",
                 errorAttributeDTO
         );
@@ -199,7 +197,7 @@ public class GlobalExceptionHandler {
         );
 
         ErrorResponseDto errorResponseDTO = ErrorResponseDto.create(
-                ServerErrorCode.WS_NOT_FOUND_HANDLER,
+                WebSocketApplicationCode.NOT_FOUND_HANDLER,
                 "Internal Server Error",
                 errorAttributeDTO
         );
@@ -220,7 +218,7 @@ public class GlobalExceptionHandler {
         );
 
         ErrorResponseDto errorResponseDTO = ErrorResponseDto.create(
-                ServerErrorCode.WS_NOT_READABLE_REQUEST,
+                WebSocketApplicationCode.NOT_READABLE_REQUEST,
                 "Not Readable Request",
                 errorAttributeDTO
         );
@@ -286,7 +284,7 @@ public class GlobalExceptionHandler {
         );
 
         ErrorResponseDto errorResponseDTO = ErrorResponseDto.create(
-                ServerErrorCode.WS_METHOD_ARGUMENT_TYPE_MISMATCH,
+                WebSocketApplicationCode.METHOD_ARGUMENT_TYPE_MISMATCH,
                 "Validation Error",
                 errorAttributeDTO
         );
@@ -307,7 +305,7 @@ public class GlobalExceptionHandler {
         );
 
         ErrorResponseDto errorResponseDTO = ErrorResponseDto.create(
-                ServerErrorCode.WS_INTERNAL_ERROR,
+                WebSocketApplicationCode.INTERNAL_SERVER_ERROR,
                 "Internal Server Error",
                 errorAttributeDTO
         );

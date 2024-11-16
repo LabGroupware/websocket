@@ -1,7 +1,7 @@
 package org.cresplanex.nova.websocket.exception;
 
 import lombok.Getter;
-import org.cresplanex.nova.websocket.constants.ServerErrorCode;
+import org.cresplanex.api.state.common.constants.WebSocketApplicationCode;
 
 @Getter
 public class AuthServerError {
@@ -10,7 +10,7 @@ public class AuthServerError {
     private final String message;
 
     public AuthServerError() {
-        this(ServerErrorCode.WS_INTERNAL_ERROR, "Internal Server Error");
+        this(WebSocketApplicationCode.INTERNAL_SERVER_ERROR, "Internal Server Error");
     }
 
     public AuthServerError(String code, String message) {
