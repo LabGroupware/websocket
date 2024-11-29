@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @AllArgsConstructor
@@ -39,5 +40,20 @@ public class RedisKeyValueTemplate implements KeyValueTemplate {
     @Override
     public boolean exists(String key) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+    }
+
+    @Override
+    public void addSetValue(String key, Object value) {
+        redisTemplate.opsForSet().add(key, value);
+    }
+
+    @Override
+    public Set<Object> getSetValues(String key) {
+        return redisTemplate.opsForSet().members(key);
+    }
+
+    @Override
+    public void removeSetValues(String key, Object ...value) {
+        redisTemplate.opsForSet().remove(key, value);
     }
 }

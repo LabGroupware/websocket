@@ -2,8 +2,11 @@ package org.cresplanex.nova.websocket.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.cresplanex.api.state.common.utils.CustomIdGenerator;
 import org.cresplanex.nova.websocket.constants.WebSocketSetting;
+import org.cresplanex.nova.websocket.template.KeyValueTemplate;
 import org.cresplanex.nova.websocket.ws.receive.ReceptionMessage;
 import org.cresplanex.nova.websocket.ws.receive.SubscribeMessage;
 import org.cresplanex.nova.websocket.ws.receive.UnsubscribeMessage;
@@ -16,12 +19,23 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static org.cresplanex.nova.websocket.constants.WebSocketSetting.*;
+
 /**
  * WebSocket接続ハンドラ
  * textMessageのみを処理し, バイナリであればエラーを投げる
  */
 @Slf4j
+@RequiredArgsConstructor
 public class ConnectionHandler extends TextWebSocketHandler {
+
+    private final KeyValueTemplate keyValueTemplate;
+
+    private final CustomIdGenerator customIdGenerator;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -33,7 +47,15 @@ public class ConnectionHandler extends TextWebSocketHandler {
      */
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        log.info("WebSocket Connection Established: {}", session.getId());
+        String userId = (String) session.getAttributes().get(WebSocketSetting.USER_ID_SESSION_ATTRIBUTE);
+        if (userId == null) {
+            log.error("User ID is not found in session attributes");
+            return;
+        }
+        String socketId = session.getId();
+        log.trace("WebSocket Connection Established: {}", socketId);
+
+        keyValueTemplate.addSetValue(USER_KEY_PREFIX + userId, socketId);
     }
 
     /**
@@ -50,17 +72,19 @@ public class ConnectionHandler extends TextWebSocketHandler {
             log.error("User ID is not found in session attributes");
             return;
         }
+        String socketId = session.getId();
 
-        log.info("Received Message: {}\nFrom: {}", message.getPayload(), userId);
+        log.trace("Received Message: {}\nFrom: {}", message.getPayload(), userId);
 
         try {
             ReceptionMessage receptionMessage = objectMapper.readValue(message.getPayload(), ReceptionMessage.class);
 
             switch (receptionMessage.getType()) {
                 case "subscribe":
+                    SubscribeMessage subscribeMessageData;
                     try {
-                        SubscribeMessage subscribeMessageData = objectMapper.readValue(message.getPayload(), SubscribeMessage.class);
-                        log.info("Subscribe: {}", subscribeMessageData.getData().getAggregateIds());
+                        subscribeMessageData = objectMapper.readValue(message.getPayload(), SubscribeMessage.class);
+                        log.trace("Subscribe: {}", subscribeMessageData.getData().getAggregateIds());
                     } catch (Exception e) {
                         CannnotParseResponseMessage cannnotParseResponseMessage = CannnotParseResponseMessage.builder()
                                 .type(CannnotParseResponseMessage.TYPE)
@@ -71,8 +95,21 @@ public class ConnectionHandler extends TextWebSocketHandler {
                         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(cannnotParseResponseMessage)));
                         return;
                     }
+
+                    String subscriptionId = customIdGenerator.generate();
+
+                    for (String aggregateId : subscribeMessageData.getData().getAggregateIds()) {
+                        for (String eventType : subscribeMessageData.getData().getEventTypes()) {
+                            String resource = subscribeMessageData.getData().getAggregateType() + ":" + aggregateId + ":" + eventType;
+                            keyValueTemplate.addSetValue(RESOURCE_KEY_PREFIX + resource, subscriptionId);
+                            keyValueTemplate.addSetValue(SUBSCRIPTION_TO_RESOURCE_KEY_PREFIX + subscriptionId, resource);
+                        }
+                    }
+
+                    keyValueTemplate.addSetValue(SOCKET_KEY_PREFIX + socketId, subscriptionId);
+
                     SubscribeResponseMessage subscribeResponseMessage = SubscribeResponseMessage.builder()
-                            .subscriptionId("subscriptionId")
+                            .subscriptionId(subscriptionId)
                             .messageId(receptionMessage.getMessageId())
                             .type(SubscribeResponseMessage.TYPE)
                             .success(true)
@@ -80,12 +117,12 @@ public class ConnectionHandler extends TextWebSocketHandler {
                     session.sendMessage(new TextMessage(objectMapper.writeValueAsString(subscribeResponseMessage)));
                     break;
                 case "unsubscribe":
+                    UnsubscribeMessage unsubscribeMessageData;
                     try {
-                        UnsubscribeMessage unsubscribeMessageData = objectMapper.readValue(message.getPayload(), UnsubscribeMessage.class);
-                        log.info("Unsubscribe: {}", unsubscribeMessageData);
+                        unsubscribeMessageData = objectMapper.readValue(message.getPayload(), UnsubscribeMessage.class);
+                        log.trace("Unsubscribe: {}", unsubscribeMessageData);
                     }catch (Exception e) {
                         log.error("Cannot parse unsubscribe message: {}", e.getMessage());
-                        log.error("Cannot parse payload: {}", message.getPayload());
                         CannnotParseResponseMessage cannnotParseResponseMessage = CannnotParseResponseMessage.builder()
                                 .type(CannnotParseResponseMessage.TYPE)
                                 .messageId(receptionMessage.getMessageId())
@@ -95,6 +132,19 @@ public class ConnectionHandler extends TextWebSocketHandler {
                         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(cannnotParseResponseMessage)));
                         return;
                     }
+                    List<String> subscriptionIds = unsubscribeMessageData.getData().getSubscriptionIds();
+
+                    for (String subscriberId : subscriptionIds) {
+                        Set<Object> resources = keyValueTemplate.getSetValues(SUBSCRIPTION_TO_RESOURCE_KEY_PREFIX + subscriberId);
+
+                        resources.forEach(resource -> {
+                            keyValueTemplate.removeSetValues(RESOURCE_KEY_PREFIX + resource, subscriberId);
+                        });
+                        keyValueTemplate.delete(SUBSCRIPTION_TO_RESOURCE_KEY_PREFIX + subscriberId);
+                    }
+
+                    keyValueTemplate.removeSetValues(SOCKET_KEY_PREFIX + socketId, subscriptionIds);
+
                     UnsubscribeResponseMessage unsubscribeResponseMessage = UnsubscribeResponseMessage.builder()
                             .messageId(receptionMessage.getMessageId())
                             .type(UnsubscribeResponseMessage.TYPE)
@@ -129,8 +179,11 @@ public class ConnectionHandler extends TextWebSocketHandler {
      */
     @Override
     public void handleTransportError(WebSocketSession session, @NonNull Throwable exception) throws Exception {
-        log.info("WebSocket Connection Closed from Client: {}", session.getId());
-        return;
+        log.trace("WebSocket Connection Closed from Client: {}", session.getId());
+
+        if (session.isOpen()) {
+            session.close(CloseStatus.SERVER_ERROR);
+        }
     }
 
     /**
@@ -142,7 +195,27 @@ public class ConnectionHandler extends TextWebSocketHandler {
      */
     @Override
     public void afterConnectionClosed(WebSocketSession session, @NonNull CloseStatus closeStatus) throws Exception {
-        log.info("WebSocket Connection Closed: {}", session.getId());
+        log.trace("WebSocket Connection Closed: {}", session.getId());
+
+        String userId = (String) session.getAttributes().get(WebSocketSetting.USER_ID_SESSION_ATTRIBUTE);
+        if (userId == null) {
+            log.error("User ID is not found in session attributes");
+            return;
+        }
+        String socketId = session.getId();
+
+        Set<Object> subscriptionIds = keyValueTemplate.getSetValues(SOCKET_KEY_PREFIX + socketId);
+
+        for (Object subscriptionId : subscriptionIds) {
+            Set<Object> resources = keyValueTemplate.getSetValues(SUBSCRIPTION_TO_RESOURCE_KEY_PREFIX + subscriptionId);
+            resources.forEach(resource -> {
+                keyValueTemplate.removeSetValues(RESOURCE_KEY_PREFIX + resource, subscriptionId);
+            });
+            keyValueTemplate.delete(SUBSCRIPTION_TO_RESOURCE_KEY_PREFIX + subscriptionId);
+        }
+
+        keyValueTemplate.removeSetValues(USER_KEY_PREFIX + userId, socketId);
+        keyValueTemplate.delete(SOCKET_KEY_PREFIX + socketId);
     }
 
     /**
