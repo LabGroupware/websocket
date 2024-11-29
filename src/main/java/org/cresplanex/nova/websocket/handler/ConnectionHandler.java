@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.cresplanex.api.state.common.utils.CustomIdGenerator;
 import org.cresplanex.nova.websocket.constants.WebSocketSetting;
 import org.cresplanex.nova.websocket.template.KeyValueTemplate;
+import org.cresplanex.nova.websocket.ws.WebSocketSessionManager;
 import org.cresplanex.nova.websocket.ws.receive.ReceptionMessage;
 import org.cresplanex.nova.websocket.ws.receive.SubscribeMessage;
 import org.cresplanex.nova.websocket.ws.receive.UnsubscribeMessage;
@@ -21,7 +22,6 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.cresplanex.nova.websocket.constants.WebSocketSetting.*;
 
@@ -36,6 +36,8 @@ public class ConnectionHandler extends TextWebSocketHandler {
     private final KeyValueTemplate keyValueTemplate;
 
     private final CustomIdGenerator customIdGenerator;
+
+    private final WebSocketSessionManager sessionManager;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -56,6 +58,8 @@ public class ConnectionHandler extends TextWebSocketHandler {
         log.trace("WebSocket Connection Established: {}", socketId);
 
         keyValueTemplate.addSetValue(USER_KEY_PREFIX + userId, socketId);
+
+        sessionManager.addSession(socketId, session);
     }
 
     /**
@@ -107,6 +111,7 @@ public class ConnectionHandler extends TextWebSocketHandler {
                     }
 
                     keyValueTemplate.addSetValue(SOCKET_KEY_PREFIX + socketId, subscriptionId);
+                    keyValueTemplate.setValue(SUBSCRIPTION_TO_SOCKET_KEY_PREFIX + subscriptionId, socketId);
 
                     SubscribeResponseMessage subscribeResponseMessage = SubscribeResponseMessage.builder()
                             .subscriptionId(subscriptionId)
@@ -144,6 +149,7 @@ public class ConnectionHandler extends TextWebSocketHandler {
                     }
 
                     keyValueTemplate.removeSetValues(SOCKET_KEY_PREFIX + socketId, subscriptionIds);
+                    subscriptionIds.forEach(subId -> keyValueTemplate.delete(SUBSCRIPTION_TO_SOCKET_KEY_PREFIX + subId));
 
                     UnsubscribeResponseMessage unsubscribeResponseMessage = UnsubscribeResponseMessage.builder()
                             .messageId(receptionMessage.getMessageId())
@@ -184,6 +190,8 @@ public class ConnectionHandler extends TextWebSocketHandler {
         if (session.isOpen()) {
             session.close(CloseStatus.SERVER_ERROR);
         }
+
+        clearSession(session);
     }
 
     /**
@@ -197,6 +205,10 @@ public class ConnectionHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, @NonNull CloseStatus closeStatus) throws Exception {
         log.trace("WebSocket Connection Closed: {}", session.getId());
 
+        clearSession(session);
+    }
+
+    private void clearSession(WebSocketSession session) {
         String userId = (String) session.getAttributes().get(WebSocketSetting.USER_ID_SESSION_ATTRIBUTE);
         if (userId == null) {
             log.error("User ID is not found in session attributes");
@@ -216,6 +228,9 @@ public class ConnectionHandler extends TextWebSocketHandler {
 
         keyValueTemplate.removeSetValues(USER_KEY_PREFIX + userId, socketId);
         keyValueTemplate.delete(SOCKET_KEY_PREFIX + socketId);
+        subscriptionIds.forEach(subId -> keyValueTemplate.delete(SUBSCRIPTION_TO_SOCKET_KEY_PREFIX + subId));
+
+        sessionManager.removeSession(socketId);
     }
 
     /**

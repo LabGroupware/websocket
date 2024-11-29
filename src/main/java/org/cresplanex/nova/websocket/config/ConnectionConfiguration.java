@@ -1,8 +1,11 @@
 package org.cresplanex.nova.websocket.config;
 
 import lombok.RequiredArgsConstructor;
+import org.cresplanex.api.state.common.utils.CustomIdGenerator;
 import org.cresplanex.nova.websocket.auth.JwtHandshakeInterceptor;
 import org.cresplanex.nova.websocket.handler.ConnectionHandler;
+import org.cresplanex.nova.websocket.template.KeyValueTemplate;
+import org.cresplanex.nova.websocket.ws.WebSocketSessionManager;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,6 +26,12 @@ public class ConnectionConfiguration implements WebSocketConfigurer {
 
     private final JwtHandshakeInterceptor jwtHandshakeInterceptor;
 
+    private final KeyValueTemplate keyValueTemplate;
+
+    private final CustomIdGenerator customIdGenerator;
+
+    private final WebSocketSessionManager sessionManager;
+
     @Override
     public void registerWebSocketHandlers(org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry registry) {
         List<String> origins = List.of(frontOrigins.split(","));
@@ -37,6 +46,10 @@ public class ConnectionConfiguration implements WebSocketConfigurer {
 
     @Bean
     public WebSocketHandler connectionHandler() {
-        return new ConnectionHandler();
+        return new ConnectionHandler(
+                keyValueTemplate,
+                customIdGenerator,
+                sessionManager
+        );
     }
 }
