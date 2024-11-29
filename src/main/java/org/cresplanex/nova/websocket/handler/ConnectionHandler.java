@@ -35,8 +35,6 @@ public class ConnectionHandler extends TextWebSocketHandler {
 
     private final KeyValueTemplate keyValueTemplate;
 
-    private final CustomIdGenerator customIdGenerator;
-
     private final WebSocketSessionManager sessionManager;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -100,6 +98,7 @@ public class ConnectionHandler extends TextWebSocketHandler {
                         return;
                     }
 
+                    CustomIdGenerator customIdGenerator = new CustomIdGenerator();
                     String subscriptionId = customIdGenerator.generate();
 
                     for (String aggregateId : subscribeMessageData.getData().getAggregateIds()) {

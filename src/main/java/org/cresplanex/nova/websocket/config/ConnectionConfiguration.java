@@ -28,8 +28,6 @@ public class ConnectionConfiguration implements WebSocketConfigurer {
 
     private final KeyValueTemplate keyValueTemplate;
 
-    private final CustomIdGenerator customIdGenerator;
-
     private final WebSocketSessionManager sessionManager;
 
     @Override
@@ -48,7 +46,6 @@ public class ConnectionConfiguration implements WebSocketConfigurer {
     public WebSocketHandler connectionHandler() {
         return new ConnectionHandler(
                 keyValueTemplate,
-                customIdGenerator,
                 sessionManager
         );
     }

@@ -13,6 +13,7 @@ import org.cresplanex.core.events.subscriber.DomainEventHandlers;
 import org.cresplanex.core.events.subscriber.DomainEventHandlersBuilder;
 import org.cresplanex.nova.websocket.template.KeyValueTemplate;
 import org.cresplanex.nova.websocket.ws.WebSocketSessionManager;
+import org.cresplanex.nova.websocket.ws.send.EventResponseMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -87,7 +88,8 @@ public class JobEventHandler {
                 WebSocketSession session = sessionManager.getSession(socketId);
                 if (session.isOpen()) {
                     try {
-                        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(event)));
+                        EventResponseMessage responseMessage = new EventResponseMessage(eventType.toString(), event);
+                        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(responseMessage)));
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -99,7 +101,7 @@ public class JobEventHandler {
     }
 
     private Set<String> getSubscriptionIds(String jobId, EventTypes eventType) {
-        String resourceKey = RESOURCE_KEY_PREFIX + EventAggregateType.JOB + ":" + jobId + ":" + eventType;
+        String resourceKey = RESOURCE_KEY_PREFIX + EventAggregateType.JOB + ":" + jobId + ":" + eventType.toString();
         Set<Object> raw = keyValueTemplate.getSetValues(resourceKey);
 
         return raw.stream()
