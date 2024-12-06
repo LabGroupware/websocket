@@ -13,4 +13,5 @@ public class EventResponseMessage {
 
     private String eventType;
     private Object data;
+    private String type;
 }

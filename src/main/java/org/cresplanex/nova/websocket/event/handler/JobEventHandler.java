@@ -3,7 +3,6 @@ package org.cresplanex.nova.websocket.event.handler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.cresplanex.api.state.common.event.EventAggregateType;
-import org.cresplanex.api.state.common.event.model.SuccessJobEvent;
 import org.cresplanex.api.state.common.event.model.job.JobBegan;
 import org.cresplanex.api.state.common.event.model.job.JobFailed;
 import org.cresplanex.api.state.common.event.model.job.JobProcessed;
@@ -43,7 +42,7 @@ public class JobEventHandler {
                 .forAggregateType(EventAggregateType.JOB)
                 .onEvent(JobBegan.class, this::handleJobBegan, JobBegan.TYPE)
                 .onEvent(JobProcessed.class, this::handleJobProcessed, JobProcessed.TYPE)
-                .onEvent(SuccessJobEvent.class, this::handleJobSuccess, JobSuccess.TYPE)
+                .onEvent(JobSuccess.class, this::handleJobSuccess, JobSuccess.TYPE)
                 .onEvent(JobFailed.class, this::handleJobFailed, JobFailed.TYPE)
                 .build();
     }
@@ -60,7 +59,7 @@ public class JobEventHandler {
         this.writeEventToSocket(dee.getEvent().getJobId(), EventTypes.JOB_PROCESSED, dee.getEvent());
     }
 
-    private void handleJobSuccess(DomainEventEnvelope<SuccessJobEvent> dee) {
+    private void handleJobSuccess(DomainEventEnvelope<JobSuccess> dee) {
         logger.trace("Handling JobSuccess event: {}", dee.getEvent());
 
         this.writeEventToSocket(dee.getEvent().getJobId(), EventTypes.JOB_SUCCESS, dee.getEvent());
@@ -73,6 +72,7 @@ public class JobEventHandler {
     }
 
     private void writeEventToSocket(String jobId, EventTypes eventType, Object event) {
+
         Set<String> subscriptionIds = getSubscriptionIds(jobId, eventType);
 
         Set<String> socketIds = new HashSet<>();
@@ -88,7 +88,11 @@ public class JobEventHandler {
                 WebSocketSession session = sessionManager.getSession(socketId);
                 if (session.isOpen()) {
                     try {
-                        EventResponseMessage responseMessage = new EventResponseMessage(eventType.toString(), event);
+                        EventResponseMessage responseMessage = EventResponseMessage.builder()
+                                .type(EventResponseMessage.TYPE)
+                                .eventType(eventType.toString())
+                                .data(event)
+                                .build();
                         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(responseMessage)));
                     } catch (IOException e) {
                         throw new RuntimeException(e);
@@ -101,6 +105,7 @@ public class JobEventHandler {
     }
 
     private Set<String> getSubscriptionIds(String jobId, EventTypes eventType) {
+
         String resourceKey = RESOURCE_KEY_PREFIX + EventAggregateType.JOB + ":" + jobId + ":" + eventType.toString();
         Set<Object> raw = keyValueTemplate.getSetValues(resourceKey);
 
