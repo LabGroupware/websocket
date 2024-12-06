@@ -1,7 +1,6 @@
 package org.cresplanex.nova.websocket.config;
 
 import lombok.RequiredArgsConstructor;
-import org.cresplanex.api.state.common.utils.CustomIdGenerator;
 import org.cresplanex.nova.websocket.auth.JwtHandshakeInterceptor;
 import org.cresplanex.nova.websocket.handler.ConnectionHandler;
 import org.cresplanex.nova.websocket.template.KeyValueTemplate;
