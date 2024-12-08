@@ -86,20 +86,24 @@ public class JobEventHandler {
         socketIds.forEach(socketId -> {
             if (sessionManager.containsSession(socketId)) {
                 WebSocketSession session = sessionManager.getSession(socketId);
-                if (session.isOpen()) {
+
                     try {
                         EventResponseMessage responseMessage = EventResponseMessage.builder()
                                 .type(EventResponseMessage.TYPE)
                                 .eventType(eventType.toString())
                                 .data(event)
                                 .build();
-                        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(responseMessage)));
+                        synchronized(session) {
+                            if (session.isOpen()) {
+                                logger.info("Sending event to {}", responseMessage);
+                                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(responseMessage)));
+                            }else{
+                                sessionManager.removeSession(socketId);
+                            }
+                        }
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
-                }else{
-                    sessionManager.removeSession(socketId);
-                }
             }
         });
     }

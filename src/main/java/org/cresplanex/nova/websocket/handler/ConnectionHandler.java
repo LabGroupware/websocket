@@ -94,10 +94,13 @@ public class ConnectionHandler extends TextWebSocketHandler {
                                 .requestType("subscribe")
                                 .success(false)
                                 .build();
-                        if (session.isOpen()) {
-                            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(cannnotParseResponseMessage)));
-                        } else {
-                            sessionManager.removeSession(socketId);   
+
+                        synchronized (session) {
+                            if (session.isOpen()) {
+                                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(cannnotParseResponseMessage)));
+                            } else {
+                                sessionManager.removeSession(socketId);
+                            }
                         }
                         return;
                     }
@@ -123,11 +126,12 @@ public class ConnectionHandler extends TextWebSocketHandler {
                             .success(true)
                             .build();
 
-                    if (session.isOpen()) {
-                        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(subscribeResponseMessage)));
-                        
-                    } else {
-                        sessionManager.removeSession(socketId);
+                    synchronized (session) {
+                        if (session.isOpen()) {
+                            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(subscribeResponseMessage)));
+                        } else {
+                            sessionManager.removeSession(socketId);
+                        }
                     }
                     break;
                 case "unsubscribe":
@@ -144,17 +148,22 @@ public class ConnectionHandler extends TextWebSocketHandler {
                                 .success(false)
                                 .build();
 
-                        if (session.isOpen()) {
-                            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(cannnotParseResponseMessage)));
-                        } else {
-                            sessionManager.removeSession(socketId);
+                        synchronized (session) {
+                            if (session.isOpen()) {
+                                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(cannnotParseResponseMessage)));
+                            } else {
+                                sessionManager.removeSession(socketId);
+                            }
                         }
                         return;
                     }
                     List<String> subscriptionIds = unsubscribeMessageData.getData().getSubscriptionIds();
 
                     for (String subscriberId : subscriptionIds) {
+                        log.info("Unsubscribe: {}", subscriberId);
                         Set<Object> resources = keyValueTemplate.getSetValues(SUBSCRIPTION_TO_RESOURCE_KEY_PREFIX + subscriberId);
+
+                        log.info("Unsubscribing resources: {}", resources);
 
                         resources.forEach(resource -> {
                             keyValueTemplate.removeSetValues(RESOURCE_KEY_PREFIX + resource, subscriberId);
@@ -170,10 +179,13 @@ public class ConnectionHandler extends TextWebSocketHandler {
                             .type(UnsubscribeResponseMessage.TYPE)
                             .success(true)
                             .build();
-                    if (session.isOpen()) {
-                        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(unsubscribeResponseMessage)));
-                    } else {
-                        sessionManager.removeSession(socketId);
+
+                    synchronized (session) {
+                        if (session.isOpen()) {
+                            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(unsubscribeResponseMessage)));
+                        } else {
+                            sessionManager.removeSession(socketId);
+                        }
                     }
                     break;
                 default:
@@ -183,10 +195,12 @@ public class ConnectionHandler extends TextWebSocketHandler {
                             .success(false)
                             .build();
 
-                    if (session.isOpen()) {
-                        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(unsupportedResponseMessage)));
-                    } else {
-                        sessionManager.removeSession(socketId);
+                    synchronized (session) {
+                        if (session.isOpen()) {
+                            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(unsupportedResponseMessage)));
+                        } else {
+                            sessionManager.removeSession(socketId);
+                        }
                     }
                     break;
             }
@@ -195,10 +209,12 @@ public class ConnectionHandler extends TextWebSocketHandler {
                     .type(CannnotParseResponseMessage.TYPE)
                     .success(false)
                     .build();
-            if (session.isOpen()) {
-                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(cannnotParseResponseMessage)));
-            } else {
-                sessionManager.removeSession(socketId);
+            synchronized (session) {
+                if (session.isOpen()) {
+                    session.sendMessage(new TextMessage(objectMapper.writeValueAsString(cannnotParseResponseMessage)));
+                } else {
+                    sessionManager.removeSession(socketId);
+                }
             }
         }
     }

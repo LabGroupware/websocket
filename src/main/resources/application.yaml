@@ -28,12 +28,12 @@ server:
     threads:
       max: 500
       min-spare: 50
-logging:
-  level:
-    org:
-      springframework:
-        web:
-          socket: DEBUG
+#logging:
+#  level:
+#    org:
+#      springframework:
+#        web:
+#          socket: DEBUG
 core:
   kafka: # kafkaプロパティ
     bootstrap:
