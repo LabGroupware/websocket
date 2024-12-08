@@ -95,7 +95,6 @@ public class JobEventHandler {
                                 .build();
                         synchronized(session) {
                             if (session.isOpen()) {
-                                logger.info("Sending event to {}", responseMessage);
                                 session.sendMessage(new TextMessage(objectMapper.writeValueAsString(responseMessage)));
                             }else{
                                 sessionManager.removeSession(socketId);
